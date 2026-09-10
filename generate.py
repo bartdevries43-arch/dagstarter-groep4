@@ -57,43 +57,27 @@ def getal(n):
 # Rekenblokken
 # ===========================================================================
 def gen_automatiseren(rnd, t):
-    """Keer- en deelsommen die met de dagen moeilijker worden (zonder dubbele)."""
+    """Automatiseren van optellen en aftrekken t/m 20 (groep 4 doet nog geen tafels)."""
     items = []
     seen = set()
     pog = 0
-    while len(items) < 8 and pog < 500:
+    while len(items) < 14 and pog < 900:
         pog += 1
-        if t < 0.40:
-            a, b = rnd.randint(1, 10), rnd.choice([1, 2, 5, 10])
-        elif t < 0.70:
-            a, b = rnd.randint(1, 10), rnd.choice([1, 2, 3, 4, 5, 10])
+        # later in het jaar mogen sommen af en toe tot 30 gaan
+        top = 30 if (t >= 0.5 and rnd.random() < 0.4) else 20
+        if rnd.random() < 0.5:
+            a = rnd.randint(2, top - 1)
+            b = rnd.randint(1, top - a)
+            v, antw = f"{a} + {b} =", str(a + b)
         else:
-            a, b = rnd.randint(1, 10), rnd.randint(1, 10)
-        v = f"{a} × {b} ="
+            a = rnd.randint(3, top)
+            b = rnd.randint(1, a)
+            v, antw = f"{a} − {b} =", str(a - b)
         if v in seen:
             continue
         seen.add(v)
-        items.append({"vraag": v, "antwoord": str(a * b)})
-    pog = 0
-    while len(items) < 14 and pog < 500:
-        pog += 1
-        if t < 0.40:
-            deler, quot = rnd.choice([2, 5, 10]), rnd.randint(2, 8)
-            rest = 0
-        elif t < 0.70:
-            deler, quot = rnd.choice([2, 3, 4, 5, 10]), rnd.randint(2, 10)
-            rest = 0
-        else:
-            deler, quot = rnd.randint(2, 10), rnd.randint(2, 10)
-            rest = 0
-        deeltal = deler * quot + rest
-        v = f"{deeltal} : {deler} ="
-        if v in seen:
-            continue
-        seen.add(v)
-        antw = f"{quot} rest {rest}" if rest else str(quot)
         items.append({"vraag": v, "antwoord": antw})
-    return {"titel": "Automatiseren", "kolommen": 2, "items": items}
+    return {"titel": "Automatiseren (t/m 20)", "kolommen": 2, "items": items}
 
 
 def gen_hoofdrekenen(rnd, t):
@@ -133,25 +117,28 @@ NAMEN = ["Sara", "Tim", "Noor", "Lars", "Fatima", "Daan", "Sofie", "Youssef",
 
 
 def _redactie_makkelijk(rnd):
+    # groep 4: alleen optellen en aftrekken (nog geen keer- of deelsommen)
     naam = rnd.choice(NAMEN)
-    keuze = rnd.randint(0, 3)
+    keuze = rnd.randint(0, 4)
     if keuze == 0:
-        per, dozen = rnd.randint(2, 6), rnd.randint(2, 5)
-        return (f"In elke doos zitten {per} knikkers. {naam} heeft {dozen} "
-                f"dozen. Hoeveel knikkers heeft {naam} in totaal?",
-                f"{per * dozen} knikkers")
+        a, b = rnd.randint(6, 15), rnd.randint(3, 12)
+        return (f"{naam} heeft {a} knikkers en krijgt er {b} bij. "
+                f"Hoeveel knikkers heeft {naam} nu?", f"{a + b} knikkers")
     if keuze == 1:
-        prijs, aantal = rnd.randint(1, 4) * 100 + 50, rnd.randint(2, 4)
-        return (f"Een schrift kost {euro(prijs)}. {naam} koopt er {aantal}. "
-                f"Hoeveel betaalt {naam}?", euro(prijs * aantal))
+        a, b = rnd.randint(14, 26), rnd.randint(3, 10)
+        return (f"Er zitten {a} kinderen in de klas. {b} kinderen zijn ziek. "
+                f"Hoeveel kinderen zijn er op school?", f"{a - b} kinderen")
     if keuze == 2:
         totaal, af = rnd.randint(30, 60), rnd.randint(5, 25)
         return (f"Een reis is {totaal} km. Ze hebben al {af} km gereden. "
                 f"Hoeveel km moeten ze nog?", f"{totaal - af} km")
-    kind = rnd.randint(2, 5)
-    snoep = rnd.randint(2, 6) * kind
-    return (f"{snoep} snoepjes worden eerlijk verdeeld over {kind} kinderen. "
-            f"Hoeveel krijgt ieder kind?", f"{snoep // kind} snoepjes")
+    if keuze == 3:
+        a, b = rnd.randint(3, 9), rnd.randint(2, 8)
+        return (f"{naam} spaart € {a} en krijgt er € {b} bij. "
+                f"Hoeveel euro heeft {naam} nu?", f"€ {a + b}")
+    a, b = rnd.randint(20, 45), rnd.randint(5, 18)
+    return (f"Op de tak zitten {a} vogels. Er vliegen er {b} weg. "
+            f"Hoeveel vogels blijven er?", f"{a - b} vogels")
 
 
 def _redactie_middel(rnd):
