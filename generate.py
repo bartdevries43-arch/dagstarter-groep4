@@ -57,87 +57,135 @@ def getal(n):
 # Rekenblokken
 # ===========================================================================
 def gen_automatiseren(rnd, t):
-    """Automatiseren van optellen en aftrekken t/m 20 (groep 4 doet nog geen tafels)."""
-    items = []
-    seen = set()
+    """Automatiseren voor groep 4, opgebouwd over het jaar.
+
+    Groep 4 begint waar groep 3 stopte: plus en min tot 20 moeten er vlot in
+    zitten. De tafels van 2 en 10 komen daarna, dan 5, en pas in de tweede
+    helft van het jaar ook 3 en 4.
+    """
+    items, seen, pog = [], set(), 0
+    if t < 0.25:
+        tafels = []
+    elif t < 0.45:
+        tafels = [2, 10]
+    elif t < 0.70:
+        tafels = [2, 5, 10]
+    else:
+        tafels = [1, 2, 3, 4, 5, 10]
+
+    doel_keer = 0 if not tafels else (4 if t < 0.70 else 6)
+    while len(items) < doel_keer and pog < 600:
+        pog += 1
+        a, b = rnd.choice(tafels), rnd.randint(1, 10)
+        v = f"{a} × {b} ="
+        if v in seen:
+            continue
+        seen.add(v)
+        items.append({"vraag": v, "antwoord": str(a * b)})
+
     pog = 0
     while len(items) < 14 and pog < 900:
         pog += 1
-        # later in het jaar mogen sommen af en toe tot 30 gaan
-        top = 30 if (t >= 0.5 and rnd.random() < 0.4) else 20
         if rnd.random() < 0.5:
-            a = rnd.randint(2, top - 1)
-            b = rnd.randint(1, top - a)
+            a = rnd.randint(2, 18)
+            b = rnd.randint(1, 20 - a)
             v, antw = f"{a} + {b} =", str(a + b)
         else:
-            a = rnd.randint(3, top)
-            b = rnd.randint(1, a)
+            a = rnd.randint(4, 20)
+            b = rnd.randint(1, a - 1)
             v, antw = f"{a} − {b} =", str(a - b)
         if v in seen:
             continue
         seen.add(v)
         items.append({"vraag": v, "antwoord": antw})
-    return {"titel": "Automatiseren (t/m 20)", "kolommen": 2, "items": items}
+
+    titel = "Automatiseren (t/m 20)" if not tafels else "Automatiseren (tafels en t/m 20)"
+    return {"titel": titel, "kolommen": 2, "items": items}
 
 
 def gen_hoofdrekenen(rnd, t):
-    """Optellen en aftrekken, oplopend; zonder dubbele sommen."""
-    items = []
-    seen = set()
-    pog = 0
-    while len(items) < 6 and pog < 500:
+    """Optellen en aftrekken tot 100, in vier stappen over het schooljaar.
+
+    Periode 1: binnen de 20, en tot 100 met hele tientallen (30 + 20).
+    Periode 2: tot 100 zonder brug over het tiental (43 + 25).
+    Periode 3: tot 100 mét brug (38 + 27).
+    Periode 4: alles door elkaar.
+    """
+    items, seen, pog = [], set(), 0
+    while len(items) < 6 and pog < 900:
         pog += 1
-        if t < 0.40:
-            a, b = rnd.randint(11, 49), rnd.randint(2, 19)
-        elif t < 0.70:
-            a, b = rnd.randint(20, 79), rnd.randint(5, 29)
+        if t < 0.25:
+            if rnd.random() < 0.5:
+                a, b = rnd.randint(2, 8) * 10, rnd.randint(1, 5) * 10
+            else:
+                a, b = rnd.randint(5, 19), rnd.randint(1, 9)
+        elif t < 0.50:
+            # zonder brug: de eenheden samen blijven onder de 10
+            tien, een = rnd.randint(1, 6) * 10, rnd.randint(1, 8)
+            a = tien + een
+            b = rnd.randint(0, 9 - een) + rnd.randint(1, max(1, 8 - tien // 10)) * 10
+        elif t < 0.75:
+            a = rnd.randint(21, 89)
+            b = rnd.randint(4, 9) + rnd.randint(0, 2) * 10
         else:
-            a, b = rnd.randint(30, 79), rnd.randint(10, 20)
-        if rnd.random() < 0.5:
-            v = f"{getal(a)} + {getal(b)} ="
-            antw = getal(a + b)
+            a = rnd.randint(21, 95)
+            b = rnd.randint(3, 40)
+
+        if a + b <= 100 and rnd.random() < 0.5:
+            v, antw = f"{a} + {b} =", str(a + b)
         else:
             if b > a:
                 a, b = b, a
-            v = f"{getal(a)} − {getal(b)} ="
-            antw = getal(a - b)
+            if b == 0 or a == b:
+                continue
+            v, antw = f"{a} − {b} =", str(a - b)
         if v in seen:
             continue
         seen.add(v)
         items.append({"vraag": v, "antwoord": antw})
-    return {"titel": "Hoofdrekenen", "kolommen": 2, "items": items}
+    return {"titel": "Hoofdrekenen (t/m 100)", "kolommen": 2, "items": items}
 
 
-# ---------------------------------------------------------------------------
-# Redactiesommen (verhaaltjessommen)
-# ---------------------------------------------------------------------------
 NAMEN = ["Sara", "Tim", "Noor", "Lars", "Fatima", "Daan", "Sofie", "Youssef",
          "Emma", "Bram", "Lisa", "Mees", "Julia", "James", "Mohammed", "Chen",
          "Amara", "Yusuf", "Aisha", "Sem", "Nora", "Finn", "Ravi", "Yara"]
 
 
-def _redactie_makkelijk(rnd):
-    # groep 4: alleen optellen en aftrekken (nog geen keer- of deelsommen)
+def _redactie_makkelijk(rnd, t=0.0):
+    """Verhaaltjessommen voor groep 4, met getallen die bij de periode passen."""
     naam = rnd.choice(NAMEN)
+    if t < 0.25:
+        klein, groot = (2, 8), (10, 20)
+    elif t < 0.50:
+        klein, groot = (2, 9), (15, 50)
+    else:
+        klein, groot = (3, 19), (25, 95)
+
     keuze = rnd.randint(0, 4)
     if keuze == 0:
-        a, b = rnd.randint(6, 15), rnd.randint(3, 12)
+        a, b = rnd.randint(*groot), rnd.randint(*klein)
         return (f"{naam} heeft {a} knikkers en krijgt er {b} bij. "
                 f"Hoeveel knikkers heeft {naam} nu?", f"{a + b} knikkers")
     if keuze == 1:
-        a, b = rnd.randint(14, 26), rnd.randint(3, 10)
-        return (f"Er zitten {a} kinderen in de klas. {b} kinderen zijn ziek. "
+        # een klas blijft een klas, dus die getallen houd ik klein
+        a = rnd.randint(18, 30)
+        b = rnd.randint(1, 6)
+        kind = "kind is" if b == 1 else "kinderen zijn"
+        return (f"Er zitten {a} kinderen in de klas. {b} {kind} ziek. "
                 f"Hoeveel kinderen zijn er op school?", f"{a - b} kinderen")
     if keuze == 2:
-        totaal, af = rnd.randint(30, 60), rnd.randint(5, 25)
-        return (f"Een reis is {totaal} km. Ze hebben al {af} km gereden. "
-                f"Hoeveel km moeten ze nog?", f"{totaal - af} km")
+        totaal = rnd.randint(*groot)
+        af = rnd.randint(klein[0], min(klein[1], max(klein[0], totaal - 1)))
+        return (f"De juf heeft {totaal} stickers. Ze geeft er {af} weg. "
+                f"Hoeveel stickers houdt ze over?", f"{totaal - af} stickers")
     if keuze == 3:
-        a, b = rnd.randint(3, 9), rnd.randint(2, 8)
+        a, b = rnd.randint(2, 9), rnd.randint(1, 8)
         return (f"{naam} spaart € {a} en krijgt er € {b} bij. "
                 f"Hoeveel euro heeft {naam} nu?", f"€ {a + b}")
-    a, b = rnd.randint(20, 45), rnd.randint(5, 18)
-    return (f"Op de tak zitten {a} vogels. Er vliegen er {b} weg. "
+    a = rnd.randint(*groot)
+    b = rnd.randint(klein[0], min(klein[1], max(klein[0], a - 1)))
+    vliegt = "vliegt" if b == 1 else "vliegen"
+    return (f"Op de tak zitten {a} vogels. Er {vliegt} er {b} weg. "
             f"Hoeveel vogels blijven er?", f"{a - b} vogels")
 
 
@@ -200,19 +248,18 @@ def _redactie_moeilijk(rnd):
 
 
 def gen_redactie(rnd, t):
-    # groep 4: geen procenten/gemiddelde (dat is groep 4); makkelijk -> middel
-    makers = [_redactie_makkelijk, _redactie_makkelijk, _redactie_makkelijk]
-    rnd.shuffle(makers)
-    items = []
-    for mk in makers[:2]:
-        vraag, antw = mk(rnd)
+    """Groep 4 doet alleen plus en min, met getallen die bij de periode passen."""
+    items, gezien = [], set()
+    for _ in range(2):
+        for _ in range(25):
+            vraag, antw = _redactie_makkelijk(rnd, t)
+            if vraag not in gezien:
+                break
+        gezien.add(vraag)
         items.append({"vraag": vraag, "antwoord": antw})
     return {"titel": "Redactiesommen", "kolommen": 1, "items": items}
 
 
-# ---------------------------------------------------------------------------
-# Wisselblok: tijd / geld / meten / meetkunde / procenten (roteert per dag)
-# ---------------------------------------------------------------------------
 def _wissel_tijd(rnd, t):
     # groep 4: hele en halve uren, stapjes van een half of heel uur
     items = []
@@ -338,15 +385,35 @@ IJ_WOORDEN = ["tijd", "wijn", "kijken", "blij", "vrij", "prijs", "ijs",
               "wijk", "strijd", "vrijheid", "verrijken", "bewijs"]
 
 AU_WOORDEN = ["paus", "saus", "gauw", "nauw", "dauw", "blauw", "rauw",
-              "kauwen", "pauze", "applaus", "kabouter", "augurk",
+              "kauwen", "pauze", "applaus", "benauwd", "augurk",
               "restaurant", "astronaut", "auto", "sauna", "cadeau_no"]
 AU_WOORDEN = [w for w in AU_WOORDEN if not w.endswith("_no")]
 
 OU_WOORDEN = ["koud", "goud", "zout", "fout", "hout", "bout", "mouw",
               "vrouw", "touw", "schouder", "houden", "vouwen", "verkouden",
-              "stout", "oud", "flauw_no", "benauwd", "schoudertas",
-              "bourgondisch_no", "koud"]
+              "stout", "oud", "kabouter", "schoudertas", "bourgondisch_no"]
 OU_WOORDEN = [w for w in OU_WOORDEN if not w.endswith("_no")]
+
+# Verlengen: hoor je een d of een t aan het eind? (kerncategorie groep 4)
+VERLENG = [
+    ("hond", "honden", "d"), ("hand", "handen", "d"), ("mand", "manden", "d"),
+    ("bord", "borden", "d"), ("paard", "paarden", "d"), ("woord", "woorden", "d"),
+    ("hoed", "hoeden", "d"), ("brood", "broden", "d"), ("vriend", "vrienden", "d"),
+    ("wind", "winden", "d"), ("kind", "kinderen", "d"), ("land", "landen", "d"),
+    ("bed", "bedden", "d"), ("hart", "harten", "t"), ("kist", "kisten", "t"),
+    ("nest", "nesten", "t"), ("boot", "boten", "t"), ("licht", "lichten", "t"),
+    ("pot", "potten", "t"), ("kast", "kasten", "t"),
+]
+
+# Verdubbelen of verlengen: maak er een meervoud van (kerncategorie groep 4)
+VERDUBBEL = [
+    ("pot", "potten"), ("poot", "poten"), ("bal", "ballen"), ("baal", "balen"),
+    ("man", "mannen"), ("maan", "manen"), ("bom", "bommen"), ("boom", "bomen"),
+    ("zon", "zonnen"), ("zoon", "zonen"), ("tak", "takken"), ("taak", "taken"),
+    ("mus", "mussen"), ("muur", "muren"), ("rat", "ratten"), ("boot", "boten"),
+    ("bot", "botten"), ("kip", "kippen"), ("stok", "stokken"), ("haas", "hazen"),
+    ("das", "dassen"), ("neus", "neuzen"), ("vis", "vissen"), ("kar", "karren"),
+]
 
 # Werkwoorden tegenwoordige tijd: (infinitief, onderwerp, juiste vorm)
 WW_TT = [
@@ -388,68 +455,86 @@ VOORZETSELS = [
 
 
 def _gap_woord(woord, digraaf):
-    """Vervang de eerste ei/ij/au/ou in het woord door een streepje."""
+    """Vervang de eerste ei/ij/au/ou in het woord door een streepje.
+
+    Staat de lettercombinatie er niet in, dan geef ik None terug. Zo kan een
+    woord dat per ongeluk in de verkeerde lijst staat nooit een rare opgave
+    worden zoals "benauw__enauwd".
+    """
     idx = woord.find(digraaf)
+    if idx < 0:
+        return None
     return woord[:idx] + "__" + woord[idx + 2:]
 
 
 def gen_spelling(rnd, t, dagnummer):
-    categorie = dagnummer % 6
-    # groep 4: werkwoordspelling (tt en vt) komt nog niet aan bod -> vervang door klankgroepen
-    if categorie == 3:
-        categorie = 0   # verleden tijd -> ei/ij
-    if categorie == 2:
-        categorie = 1   # tegenwoordige tijd -> au/ou
+    """Spelling voor groep 4, in de volgorde van de leerlijn.
+
+    Groep 4 begint met de twee regelcategorieën: verlengen (hoor je een d of
+    een t?) en verdubbelen of verlengen bij het meervoud. Daarna komen de
+    weetwoorden met ei/ij en au/ou erbij. Werkwoordspelling hoort pas bij
+    groep 5 en verder, dus die zit hier niet in.
+    """
+    if t < 0.25:
+        mogelijk = ["verleng", "verdubbel"]
+    elif t < 0.50:
+        mogelijk = ["verleng", "verdubbel", "eiij"]
+    elif t < 0.75:
+        mogelijk = ["verdubbel", "eiij", "auou"]
+    else:
+        mogelijk = ["verleng", "verdubbel", "eiij", "auou", "gemengd"]
+    categorie = mogelijk[dagnummer % len(mogelijk)]
     items = []
-    if categorie == 0:  # ei / ij
+
+    if categorie == "verleng":
+        titel = "Spelling: schrijf je een d of een t?"
+        keuze = VERLENG[:]
+        rnd.shuffle(keuze)
+        for woord, lang, letter in keuze[:8]:
+            items.append({"vraag": f"{woord[:-1]}__  ({lang})", "antwoord": letter})
+    elif categorie == "verdubbel":
+        titel = "Spelling: maak er meer van"
+        keuze = VERDUBBEL[:]
+        rnd.shuffle(keuze)
+        for woord, meervoud in keuze[:8]:
+            items.append({"vraag": f"{woord} →", "antwoord": meervoud})
+    elif categorie == "eiij":
         titel = "Spelling: vul in ei of ij"
         keuze = [(w, "ei") for w in EI_WOORDEN] + [(w, "ij") for w in IJ_WOORDEN]
         rnd.shuffle(keuze)
-        for woord, dg in keuze[:8]:
-            items.append({"vraag": _gap_woord(woord, dg), "antwoord": dg})
-    elif categorie == 1:  # au / ou
+        for woord, dg in keuze:
+            gat = _gap_woord(woord, dg)
+            if gat:
+                items.append({"vraag": gat, "antwoord": dg})
+            if len(items) >= 8:
+                break
+    elif categorie == "auou":
         titel = "Spelling: vul in au of ou"
         keuze = [(w, "au") for w in AU_WOORDEN] + [(w, "ou") for w in OU_WOORDEN]
         rnd.shuffle(keuze)
-        for woord, dg in keuze[:8]:
-            items.append({"vraag": _gap_woord(woord, dg), "antwoord": dg})
-    elif categorie == 2:  # werkwoord tegenwoordige tijd
-        titel = "Werkwoorden: tegenwoordige tijd"
-        keuze = WW_TT[:]
-        rnd.shuffle(keuze)
-        for inf, ond, vorm in keuze[:6]:
-            items.append({"vraag": f"{ond.capitalize()} ___ ({inf}).",
-                          "antwoord": vorm})
-    elif categorie == 3:  # werkwoord verleden tijd
-        titel = "Werkwoorden: verleden tijd"
-        keuze = WW_VT[:]
-        rnd.shuffle(keuze)
-        for inf, ond, vorm in keuze[:6]:
-            items.append({"vraag": f"{ond.capitalize()} ___ ({inf}).",
-                          "antwoord": vorm})
-    elif categorie == 4:  # vaste voorzetsels
-        titel = "Spelling: vul het juiste voorzetsel in"
-        keuze = VOORZETSELS[:]
-        rnd.shuffle(keuze)
-        for zin, antw in keuze[:6]:
-            items.append({"vraag": zin, "antwoord": antw})
-    else:  # gemengd woorddictee-achtig: ei/ij + au/ou door elkaar
+        for woord, dg in keuze:
+            gat = _gap_woord(woord, dg)
+            if gat:
+                items.append({"vraag": gat, "antwoord": dg})
+            if len(items) >= 8:
+                break
+    else:
         titel = "Spelling: vul de juiste letters in"
-        keuze = ([(w, "ei") for w in EI_WOORDEN] +
-                 [(w, "ij") for w in IJ_WOORDEN] +
-                 [(w, "au") for w in AU_WOORDEN] +
-                 [(w, "ou") for w in OU_WOORDEN])
+        keuze = ([(w, "ei") for w in EI_WOORDEN] + [(w, "ij") for w in IJ_WOORDEN] +
+                 [(w, "au") for w in AU_WOORDEN] + [(w, "ou") for w in OU_WOORDEN])
         rnd.shuffle(keuze)
-        for woord, dg in keuze[:8]:
-            items.append({"vraag": _gap_woord(woord, dg), "antwoord": dg})
+        for woord, dg in keuze:
+            gat = _gap_woord(woord, dg)
+            if gat:
+                items.append({"vraag": gat, "antwoord": dg})
+            if len(items) >= 8:
+                break
+
     gezien = set()
     items = [it for it in items if not (it["vraag"] in gezien or gezien.add(it["vraag"]))]
     return {"titel": titel, "kolommen": 2, "items": items}
 
 
-# ===========================================================================
-# Technisch lezen (woordenrij, oplopend moeilijker)
-# ===========================================================================
 LEESWOORDEN = [
     # heel eenvoudig (1 lettergreep, mkm)
     "boom", "vis", "huis", "bal", "tak", "zon", "boot", "kaas", "weg", "mes",
