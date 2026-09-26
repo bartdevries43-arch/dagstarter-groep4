@@ -57,41 +57,22 @@ def getal(n):
 # Rekenblokken
 # ===========================================================================
 def gen_automatiseren(rnd, t):
-    """Automatiseren voor groep 4, opgebouwd over het jaar.
+    """Automatiseren voor groep 4: optellen en aftrekken.
 
-    Groep 4 begint waar groep 3 stopte: plus en min tot 20 moeten er vlot in
-    zitten. De tafels van 2 en 10 komen daarna, dan 5, en pas in de tweede
-    helft van het jaar ook 3 en 4.
+    Groep 4 doet nog GEEN tafels/keersommen en GEEN deelsommen. Automatiseren
+    is hier het vlot leren optellen en aftrekken tot 20 (en later af en toe tot
+    30), aansluitend op groep 3.
     """
     items, seen, pog = [], set(), 0
-    if t < 0.25:
-        tafels = []
-    elif t < 0.45:
-        tafels = [2, 10]
-    elif t < 0.70:
-        tafels = [2, 5, 10]
-    else:
-        tafels = [1, 2, 3, 4, 5, 10]
-
-    doel_keer = 0 if not tafels else (4 if t < 0.70 else 6)
-    while len(items) < doel_keer and pog < 600:
-        pog += 1
-        a, b = rnd.choice(tafels), rnd.randint(1, 10)
-        v = f"{a} × {b} ="
-        if v in seen:
-            continue
-        seen.add(v)
-        items.append({"vraag": v, "antwoord": str(a * b)})
-
-    pog = 0
     while len(items) < 14 and pog < 900:
         pog += 1
+        top = 30 if (t >= 0.5 and rnd.random() < 0.4) else 20
         if rnd.random() < 0.5:
-            a = rnd.randint(2, 18)
-            b = rnd.randint(1, 20 - a)
+            a = rnd.randint(2, top - 1)
+            b = rnd.randint(1, top - a)
             v, antw = f"{a} + {b} =", str(a + b)
         else:
-            a = rnd.randint(4, 20)
+            a = rnd.randint(4, top)
             b = rnd.randint(1, a - 1)
             v, antw = f"{a} − {b} =", str(a - b)
         if v in seen:
@@ -99,8 +80,7 @@ def gen_automatiseren(rnd, t):
         seen.add(v)
         items.append({"vraag": v, "antwoord": antw})
 
-    titel = "Automatiseren (t/m 20)" if not tafels else "Automatiseren (tafels en t/m 20)"
-    return {"titel": titel, "kolommen": 2, "items": items}
+    return {"titel": "Automatiseren (t/m 20)", "kolommen": 2, "items": items}
 
 
 def gen_hoofdrekenen(rnd, t):
